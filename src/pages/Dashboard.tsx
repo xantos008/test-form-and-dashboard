@@ -11,13 +11,13 @@ import AppNavbar from '../components/AppNavbar';
 import Header from '../components/Header';
 import MainGrid from '../components/MainGrid';
 import SideMenu from '../components/SideMenu';
-import AppTheme from '../../Downloads/b2caf647-1938-48df-8181-bb5801161eb0/theme/AppTheme';
+import AppTheme from '../theme/AppTheme';
 import {
   chartsCustomizations,
   dataGridCustomizations,
   datePickersCustomizations,
   treeViewCustomizations,
-} from '../../Downloads/b2caf647-1938-48df-8181-bb5801161eb0/theme/customizations';
+} from '../theme/customizations';
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -38,8 +38,8 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
           component="main"
           sx={(theme) => ({
             flexGrow: 1,
-            backgroundColor: theme.vars
-              ? `rgba(${theme.vars.palette.background.defaultChannel} / 1)`
+            backgroundColor: (theme as any).vars
+              ? `rgba(${(theme as any).vars.palette.background.defaultChannel} / 1)`
               : alpha(theme.palette.background.default, 1),
             overflow: 'auto',
           })}

@@ -17,11 +17,10 @@ import ForgotPassword from '../components/ForgotPassword';
 import AppTheme from '../theme/AppTheme';
 import ColorModeSelect from '../theme/ColorModeSelect';
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
-import { GoogleLogin } from "@react-oauth/google";
-import {jwtDecode} from "jwt-decode";
-import {useDispatch} from "react-redux";
-import {login} from "../store/slices/authSlice";
-import {IUser} from "../store/slices/authSlice/types";
+import { useGoogleLogin } from "@react-oauth/google";
+import { useDispatch } from "react-redux";
+import { addUser, login } from "../store/slices/authSlice";
+import { useNavigate } from "react-router";
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -67,11 +66,41 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
 
 export default function SignIn(props: { disableCustomTheme?: boolean }) {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [emailError, setEmailError] = React.useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = React.useState('');
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
   const [open, setOpen] = React.useState(false);
+
+  const auth = useGoogleLogin({
+    onSuccess: async tokenResponse => {
+      const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: {Authorization: `Bearer ${tokenResponse.access_token}`},
+          })
+          .then(res => res.json())
+      if(userInfo) {
+        const { email, name, picture } = userInfo
+        if (email && name) {
+          dispatch(addUser({
+            name,
+            password: 'no-password',
+            picture,
+            email
+          }))
+        }
+      }
+    },
+    onError: (error) => {
+      console.log('Google Auth Error', error);
+      alert('Google Auth Error');
+    },
+    onNonOAuthError: (error) => {
+      console.log('Google NonOAuth Error', error);
+      alert('Google Auth Error');
+    },
+    flow: 'implicit',
+  });
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -82,15 +111,25 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (emailError || passwordError) {
-      event.preventDefault();
       return;
     }
     const data = new FormData(event.currentTarget);
+
     console.log({
       email: data.get('email'),
       password: data.get('password'),
     });
+    const userEmail = data.get('email');
+    const userPass = data.get('password');
+
+    if(userPass && userEmail) {
+      dispatch(login({
+        password: userPass as string,
+        email: userEmail as string
+      }))
+    }
   };
 
   const validateInputs = () => {
@@ -204,28 +243,14 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
           </Box>
           <Divider>or</Divider>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <GoogleLogin
-              width={'100%'}
-              onSuccess={(credentialResponse) => {
-                const result: IUser | null = credentialResponse.credential ? jwtDecode(credentialResponse.credential) : null
-                if(result) {
-                  dispatch(login({
-                    name: result.name,
-                    password: 'no-password',
-                    picture: result.picture,
-                    email: result.email
-                  }))
-                }
-              }}
-            />
-            {/*<Button*/}
-            {/*  fullWidth*/}
-            {/*  variant="outlined"*/}
-            {/*  onClick={() => alert('Sign in with Google')}*/}
-            {/*  startIcon={<GoogleIcon />}*/}
-            {/*>*/}
-            {/*  Sign in with Google*/}
-            {/*</Button>*/}
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => auth()}
+              startIcon={<GoogleIcon />}
+            >
+              Sign in with Google
+            </Button>
             <Button
               fullWidth
               variant="outlined"
@@ -237,9 +262,11 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
             <Typography sx={{ textAlign: 'center' }}>
               Don&apos;t have an account?{' '}
               <Link
-                href="/material-ui/getting-started/templates/sign-in/"
+                onClick={() => {
+                  navigate('/signup')
+                }}
                 variant="body2"
-                sx={{ alignSelf: 'center' }}
+                sx={{ alignSelf: 'center', cursor: 'pointer' }}
               >
                 Sign up
               </Link>

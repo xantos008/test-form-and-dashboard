@@ -20,9 +20,10 @@ const authSlice = createSlice({
                 state.userInfo = payload
             } else {
                 state.usersList = [...state.usersList, ...[payload]]
+                state.userInfo = payload
             }
         },
-        login: (state, { payload }: PayloadAction<IUser>) => {
+        login: (state, { payload }: PayloadAction<Partial<IUser>>) => {
             const { password, email } = payload
             const checkUser = state.usersList.find(
                 (item) =>
@@ -30,7 +31,7 @@ const authSlice = createSlice({
                     item.password === password
             )
             if(checkUser) {
-                state.userInfo = payload
+                state.userInfo = checkUser
             }
         },
         logout: (state) => {
@@ -41,10 +42,10 @@ const authSlice = createSlice({
 
 export const { addUser, login, logout } = authSlice.actions;
 
-const selectUserInfo = (state: RootState) => state.auth.userInfo
+const selectUserInfo = (state: RootState) => state.auth
 export const userInfoSelector = createSelector(
     [selectUserInfo],
-    user => user
+    user => user.userInfo
 );
 
 export default authSlice.reducer

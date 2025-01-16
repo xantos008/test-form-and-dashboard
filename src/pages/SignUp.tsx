@@ -16,11 +16,10 @@ import { styled } from '@mui/material/styles';
 import AppTheme from '../theme/AppTheme';
 import ColorModeSelect from '../theme/ColorModeSelect';
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
-import {IUser} from "../store/slices/authSlice/types";
-import {jwtDecode} from "jwt-decode";
 import { addUser } from "../store/slices/authSlice";
-import { GoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router";
 
 const Card = styled(MuiCard)(({ theme }) => ({
     display: 'flex',
@@ -66,12 +65,42 @@ const SignUpContainer = styled(Stack)(({ theme }) => ({
 
 export default function SignUp(props: { disableCustomTheme?: boolean }) {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const [emailError, setEmailError] = React.useState(false);
     const [emailErrorMessage, setEmailErrorMessage] = React.useState('');
     const [passwordError, setPasswordError] = React.useState(false);
     const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
     const [nameError, setNameError] = React.useState(false);
     const [nameErrorMessage, setNameErrorMessage] = React.useState('');
+
+    const auth = useGoogleLogin({
+        onSuccess: async tokenResponse => {
+            const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: {Authorization: `Bearer ${tokenResponse.access_token}`},
+            })
+                .then(res => res.json())
+            if(userInfo) {
+                const { email, name, picture } = userInfo
+                if (email && name) {
+                    dispatch(addUser({
+                        name,
+                        password: 'no-password',
+                        picture,
+                        email
+                    }))
+                }
+            }
+        },
+        onError: (error) => {
+            console.log('Google Auth Error', error);
+            alert('Google Auth Error');
+        },
+        onNonOAuthError: (error) => {
+            console.log('Google NonOAuth Error', error);
+            alert('Google Auth Error');
+        },
+        flow: 'implicit',
+    });
 
     const validateInputs = () => {
         const email = document.getElementById('email') as HTMLInputElement;
@@ -211,28 +240,14 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
                         <Typography sx={{ color: 'text.secondary' }}>or</Typography>
                     </Divider>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <GoogleLogin
-                            width={'100%'}
-                            onSuccess={(credentialResponse) => {
-                                const result: IUser | null = credentialResponse.credential ? jwtDecode(credentialResponse.credential) : null
-                                if(result) {
-                                    dispatch(addUser({
-                                        name: result.name,
-                                        password: 'no-password',
-                                        picture: result.picture,
-                                        email: result.email
-                                    }))
-                                }
-                            }}
-                        />
-                        {/*<Button*/}
-                        {/*    fullWidth*/}
-                        {/*    variant="outlined"*/}
-                        {/*    onClick={() => alert('Sign up with Google')}*/}
-                        {/*    startIcon={<GoogleIcon />}*/}
-                        {/*>*/}
-                        {/*    Sign up with Google*/}
-                        {/*</Button>*/}
+                        <Button
+                            fullWidth
+                            variant="outlined"
+                            onClick={() => auth()}
+                            startIcon={<GoogleIcon />}
+                        >
+                            Sign up with Google
+                        </Button>
                         <Button
                             fullWidth
                             variant="outlined"
@@ -244,9 +259,11 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
                         <Typography sx={{ textAlign: 'center' }}>
                             Already have an account?{' '}
                             <Link
-                                href="/signin"
+                                onClick={() => {
+                                    navigate('/')
+                                }}
                                 variant="body2"
-                                sx={{ alignSelf: 'center' }}
+                                sx={{ alignSelf: 'center', cursor: 'pointer' }}
                             >
                                 Sign in
                             </Link>

@@ -105,8 +105,8 @@ interface CustomLabelProps {
 function CustomLabel({ color, expandable, children, ...other }: CustomLabelProps) {
   const theme = useTheme();
   const colors = {
-    blue: (theme.vars || theme).palette.primary.main,
-    green: (theme.vars || theme).palette.success.main,
+    blue: ((theme as any).vars || theme).palette.primary.main,
+    green: ((theme as any).vars || theme).palette.success.main,
   };
 
   const iconColor = color ? colors[color] : null;
@@ -144,9 +144,11 @@ const CustomTreeItem = React.forwardRef(function CustomTreeItem(
     publicAPI,
   } = useTreeItem2({ id, itemId, children, label, disabled, rootRef: ref });
 
+  // @ts-ignore
   const item = publicAPI.getItem(itemId);
   const color = item?.color;
   return (
+      // @ts-ignore
     <TreeItem2Provider itemId={itemId}>
       <TreeItem2Root {...getRootProps(other)}>
         <TreeItem2Content

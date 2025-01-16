@@ -1,8 +1,127 @@
 import * as React from 'react';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
-import { GridCellParams, GridRowsProp, GridColDef } from '@mui/x-data-grid';
+import {
+  GridCellParams,
+  GridRowsProp,
+  GridColDef,
+  GRID_DATE_COL_DEF,
+  GridColTypeDef,
+  getGridDateOperators, GridRenderEditCellParams, GridFilterInputValueProps, useGridApiContext
+} from '@mui/x-data-grid';
 import { SparkLineChart } from '@mui/x-charts/SparkLineChart';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import dayjs, { Dayjs } from 'dayjs';
+
+import { unstable_useEnhancedEffect as useEnhancedEffect } from '@mui/utils';
+
+const dateColumnType: GridColTypeDef<Date, string> = {
+  ...GRID_DATE_COL_DEF,
+  resizable: false,
+  renderEditCell: (params) => {
+    return <GridEditDateCell {...params} />;
+  },
+  filterOperators: getGridDateOperators(false).map((item) => ({
+    ...item,
+    InputComponent: GridFilterDateInput,
+    InputComponentProps: { showTime: false },
+  })),
+  valueFormatter: (value) => {
+    if (value) {
+      return dayjs(value).format('MM/DD/YYYY');
+    }
+    return '';
+  },
+};
+
+function GridEditDateCell({
+  id,
+  field,
+  value,
+  colDef,
+  hasFocus,
+}: GridRenderEditCellParams<any, Date | null, string>) {
+  const apiRef = useGridApiContext();
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const Component = colDef.type === 'dateTime' ? DateTimePicker : DatePicker;
+
+  const handleChange = (newValue: unknown) => {
+    apiRef.current.setEditCellValue({ id, field, value: newValue });
+  };
+
+  useEnhancedEffect(() => {
+    if (hasFocus) {
+      inputRef.current!.focus();
+    }
+  }, [hasFocus]);
+
+  return (
+      <Component
+          // @ts-ignore
+          value={value}
+          autoFocus
+          onChange={handleChange}
+          slotProps={{
+            textField: {
+              inputRef,
+              variant: 'standard',
+              fullWidth: true,
+              sx: {
+                padding: '0 9px',
+                justifyContent: 'center',
+              },
+              InputProps: {
+                disableUnderline: true,
+                sx: { fontSize: 'inherit' },
+              },
+            },
+          }}
+      />
+  );
+}
+
+function GridFilterDateInput(
+    props: GridFilterInputValueProps & { showTime?: boolean },
+) {
+  const { item, showTime, applyValue, apiRef } = props;
+
+  const Component = showTime ? DateTimePicker : DatePicker;
+
+  const handleFilterChange = (newValue: unknown) => {
+    applyValue({ ...item, value: newValue });
+  };
+
+  return (
+      <Component
+          // @ts-ignore
+          value={item.value ? new Date(item.value) : null}
+          autoFocus
+          label={apiRef.current.getLocaleText('filterPanelInputLabel')}
+          slotProps={{
+            textField: {
+              variant: 'standard',
+            },
+            inputAdornment: {
+              sx: {
+                '& .MuiButtonBase-root': {
+                  marginRight: -1,
+                },
+              },
+            },
+          }}
+          onChange={handleFilterChange}
+      />
+  );
+}
+
+function randomCreatedDate() {
+  function randomDate(start: Date, end: Date) {
+    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  }
+
+  return randomDate(new Date(2012, 0, 1), new Date());
+}
 
 type SparkLineData = number[];
 
@@ -96,6 +215,15 @@ export const columns: GridColDef[] = [
     minWidth: 80,
   },
   {
+    field: 'dateCreated',
+    ...dateColumnType,
+    headerName: 'Date created',
+    headerAlign: 'left',
+    align: 'right',
+    flex: 1,
+    minWidth: 180,
+  },
+  {
     field: 'eventCount',
     headerName: 'Event Count',
     headerAlign: 'right',
@@ -133,6 +261,7 @@ export const rows: GridRowsProp = [
     id: 1,
     pageTitle: 'Homepage Overview',
     status: 'Online',
+    dateCreated: randomCreatedDate(),
     eventCount: 8345,
     users: 212423,
     viewsPerUser: 18.5,
@@ -147,6 +276,7 @@ export const rows: GridRowsProp = [
   {
     id: 2,
     pageTitle: 'Product Details - Gadgets',
+    dateCreated: randomCreatedDate(),
     status: 'Online',
     eventCount: 5653,
     users: 172240,
@@ -160,6 +290,7 @@ export const rows: GridRowsProp = [
   {
     id: 3,
     pageTitle: 'Checkout Process - Step 1',
+    dateCreated: randomCreatedDate(),
     status: 'Offline',
     eventCount: 3455,
     users: 58240,
@@ -175,6 +306,7 @@ export const rows: GridRowsProp = [
   {
     id: 4,
     pageTitle: 'User Profile Dashboard',
+    dateCreated: randomCreatedDate(),
     status: 'Online',
     eventCount: 112543,
     users: 96240,
@@ -189,6 +321,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 5,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Article Listing - Tech News',
     status: 'Offline',
     eventCount: 3653,
@@ -204,6 +337,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 6,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'FAQs - Customer Support',
     status: 'Online',
     eventCount: 106543,
@@ -218,6 +352,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 7,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Product Comparison - Laptops',
     status: 'Offline',
     eventCount: 7853,
@@ -232,6 +367,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 8,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Shopping Cart - Electronics',
     status: 'Online',
     eventCount: 8563,
@@ -247,6 +383,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 9,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Payment Confirmation - Bank Transfer',
     status: 'Offline',
     eventCount: 4563,
@@ -261,6 +398,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 10,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Product Reviews - Smartphones',
     status: 'Online',
     eventCount: 9863,
@@ -276,6 +414,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 11,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Subscription Management - Services',
     status: 'Offline',
     eventCount: 6563,
@@ -291,6 +430,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 12,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Order Tracking - Shipments',
     status: 'Online',
     eventCount: 12353,
@@ -306,6 +446,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 13,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Customer Feedback - Surveys',
     status: 'Offline',
     eventCount: 5863,
@@ -320,6 +461,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 14,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Account Settings - Preferences',
     status: 'Online',
     eventCount: 7853,
@@ -334,6 +476,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 15,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Login Page - Authentication',
     status: 'Offline',
     eventCount: 9563,
@@ -349,6 +492,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 16,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Promotions - Seasonal Sales',
     status: 'Online',
     eventCount: 13423,
@@ -363,6 +507,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 17,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Tutorials - How to Guides',
     status: 'Offline',
     eventCount: 4234,
@@ -377,6 +522,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 18,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Blog Posts - Tech Insights',
     status: 'Online',
     eventCount: 8567,
@@ -391,6 +537,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 19,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Events - Webinars',
     status: 'Offline',
     eventCount: 3456,
@@ -405,6 +552,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 20,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Support - Contact Us',
     status: 'Online',
     eventCount: 6734,
@@ -419,6 +567,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 21,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Case Studies - Success Stories',
     status: 'Offline',
     eventCount: 4567,
@@ -433,6 +582,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 22,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'News - Industry Updates',
     status: 'Online',
     eventCount: 7856,
@@ -447,6 +597,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 23,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Forum - User Discussions',
     status: 'Offline',
     eventCount: 5678,
@@ -461,6 +612,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 24,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Documentation - API Reference',
     status: 'Online',
     eventCount: 6789,
@@ -475,6 +627,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 25,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Services - Consulting',
     status: 'Offline',
     eventCount: 4563,
@@ -489,6 +642,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 26,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Feedback - User Reviews',
     status: 'Online',
     eventCount: 8564,
@@ -503,6 +657,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 27,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Profiles - Team Members',
     status: 'Offline',
     eventCount: 5634,
@@ -517,6 +672,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 28,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Notifications - Alerts',
     status: 'Online',
     eventCount: 6745,
@@ -532,6 +688,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 29,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Dashboard - Metrics',
     status: 'Offline',
     eventCount: 5678,
@@ -547,6 +704,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 30,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Reports - Monthly Analysis',
     status: 'Online',
     eventCount: 7890,
@@ -562,6 +720,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 31,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Training - Employee Onboarding',
     status: 'Offline',
     eventCount: 3456,
@@ -577,6 +736,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 32,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Resources - Knowledge Base',
     status: 'Online',
     eventCount: 5678,
@@ -592,6 +752,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 33,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Settings - Privacy Controls',
     status: 'Offline',
     eventCount: 6789,
@@ -607,6 +768,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 34,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Integrations - Third-Party Services',
     status: 'Online',
     eventCount: 4567,
@@ -621,6 +783,7 @@ export const rows: GridRowsProp = [
   },
   {
     id: 35,
+    dateCreated: randomCreatedDate(),
     pageTitle: 'Account - Billing Information',
     status: 'Offline',
     eventCount: 7890,
